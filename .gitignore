@@ -7,4 +7,4 @@ __pycache__/
 .venv/
 env/
 
-mylib/setting.json
+mylib/settings.json

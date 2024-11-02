@@ -56,7 +56,7 @@ class SeedSearchAutomate(ImageProcPythonCommand):
             result = self.target_seed_in_range(seed)
             if result is not None:
                 target_seed, adv = result
-                print("seedが見つかりました")
+                print("seedが見つかりました。")
                 wait_time = self.calc_wait_time(adv)
                 message = (
                     f"目標seed: {target_seed:08X}\n"
@@ -66,23 +66,24 @@ class SeedSearchAutomate(ImageProcPythonCommand):
                 self.write_ext_log(message)
                 self.LINE_text(message)
                 break
-        # 続きから -> 大量消費
-        print("-- 消費作業に移行します -- ")
+        # 続きから
         self.press(Button.B, wait=2.5)
         self.press(Button.A, wait=0.5)
         self.press(Hat.TOP)
         self.press(Button.A)
         if self.wait_load(5):
             self.wait_until_load_finishes()
+        # 手持ち開く -> 大量消費
         self.open_party_menu()
         for _ in range(self.shadow_pos_list.index(self._setting[7])):
             self.press(Hat.BTM)
+        print("-- 消費中です -- ")
         self.pressRep(Button.A, 2)
         if self.wait_load(5):
             self.wait_until_load_finishes()
         self._wait(wait_time)
         self.press(Button.B)
-        print("-- 消費作業が完了しました -- ")
+        print("-- 消費が終了しました -- ")
         
     def command_init(self):
         try:
