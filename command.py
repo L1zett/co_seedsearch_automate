@@ -100,8 +100,8 @@ class SeedSearchAutomate(ImageProcPythonCommand):
                 "設定",
                 [
                     ["Radio", "検索方法" + " " * 80,  self.search_method_list, self.manager.get(SettingKeys.SEARTH_METHOD, self.search_method_list[0])],
-                    ["Entry", "FullDBのパス", self.manager.get(SettingKeys.FULLDB_PATH, "")],
-                    ["Entry", "LightDBのパス", self.manager.get(SettingKeys.LIGHTDB_PATH, "")],
+                    ["Entry", "FullDBのパス", self.manager.get(SettingKeys.FULLDB_PATH, "C:\\")],
+                    ["Entry", "LightDBのパス", self.manager.get(SettingKeys.LIGHTDB_PATH, "C:\\")],
                     ["Combo", "言語", self.lang_list, self.manager.get(SettingKeys.LANGUAGE, self.lang_list[0])],
                     ["Entry", "消費速度(advances/s)", self.manager.get(SettingKeys.ADV_VELOCITY, "17146.6")],
                     ["Entry", "許容する消費数上限", self.manager.get(SettingKeys.SEARTH_MAX, "10000000")],
@@ -246,8 +246,8 @@ class SeedSearchAutomate(ImageProcPythonCommand):
             if poke_scores and player_scores:
                 poke_idx = max(poke_scores, key=poke_scores.get)
                 player_idx = max(player_scores, key=player_scores.get)
-                self._logger.debug(f"Pokemon: {poke_idx}, score: {poke_scores[poke_idx]:.4f}")
-                self._logger.debug(f"Player: {player_idx}, score: {player_scores[player_idx]:.4f}")
+                # self._logger.debug(f"Pokemon: {poke_idx}, score: {poke_scores[poke_idx]:.4f}")
+                # self._logger.debug(f"Player: {player_idx}, score: {player_scores[player_idx]:.4f}")
                 return player_idx, poke_idx
 
             if perf_counter() - start_time > 5:
