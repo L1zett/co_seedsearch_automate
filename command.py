@@ -17,10 +17,11 @@ class SettingKeys:
     FULLDB_PATH = "FullDBPath"
     LIGHTDB_PATH = "LightDBPath"
     LANGUAGE = "Language"
+    ADV_METHOD = "AdvancesMethod"
     ADV_VELOCITY = "AdvancesVelocity"
     SEARTH_MAX = "SearchMax"
     TIME_OFFSET = "TimeOffset"
-    SHADOW_POS = "ShadowPokemonPosition"
+    SHADOWS_POS = "ShadowPokemonPosition"
     FREQUENCY = "Frequency"
     
 class SeedSearchAutomate(ImageProcPythonCommand):
@@ -44,6 +45,7 @@ class SeedSearchAutomate(ImageProcPythonCommand):
         self.search_method_list = ["7回検索モード", "8回検索モード"]
         self.freq_list = ["60hz", "50hz"]
         self.shadow_pos_list =["1匹目", "2匹目", "3匹目", "4匹目", "5匹目", "6匹目"] 
+        self.adv_method_list = ["ダークポケモン", "ダブルバトル", "消費しない"]
         self.is_first = True
         self.is_extension = hasattr(self, "print_t1") and callable(getattr(self, "print_t1"))
         self.push_amount = 0.1
@@ -65,30 +67,11 @@ class SeedSearchAutomate(ImageProcPythonCommand):
                     f"目標seedまでの消費数: {adv}\n"
                     f"待機時間: {timedelta(seconds=int(wait_time))}"
                 )
+                self._logger.info(message)
                 self.write_ext_log(message)
                 self.LINE_text(message)
                 break
-        # 続きから
-        self.press(Button.B, wait=2.5)
-        self.press(Button.A, wait=0.5)
-        self.press(Hat.TOP)
-        self.press(Button.A)
-        if self.wait_load(5):
-            self.wait_until_load_finishes()
-        # 手持ち開く -> 大量消費
-        self.open_party_menu()
-        if wait_time == 0:
-            print("待機時間が1秒に満たなかったため、消費は行われませんでした。")
-            return
-        for _ in range(self.shadow_pos_list.index(self._setting[7])):
-            self.press(Hat.BTM)
-        print("-- 消費中です -- ")
-        self.pressRep(Button.A, 2)
-        if self.wait_load(5):
-            self.wait_until_load_finishes()
-        self._wait(wait_time)
-        self.press(Button.B)
-        print("-- 消費が終了しました -- ")
+        self.wait_for_advance(wait_time)
         
     def command_init(self):
         try:
@@ -102,11 +85,12 @@ class SeedSearchAutomate(ImageProcPythonCommand):
                     ["Radio", "検索方法" + " " * 80,  self.search_method_list, self.manager.get(SettingKeys.SEARTH_METHOD, self.search_method_list[0])],
                     ["Entry", "FullDBのパス", self.manager.get(SettingKeys.FULLDB_PATH, "C:\\")],
                     ["Entry", "LightDBのパス", self.manager.get(SettingKeys.LIGHTDB_PATH, "C:\\")],
-                    ["Combo", "言語", self.lang_list, self.manager.get(SettingKeys.LANGUAGE, self.lang_list[0])],
+                    ["Combo", "言語設定", self.lang_list, self.manager.get(SettingKeys.LANGUAGE, self.lang_list[0])],
+                    ["Radio", "消費方法", self.adv_method_list, self.manager.get(SettingKeys.ADV_METHOD, self.adv_method_list[0])],
                     ["Entry", "消費速度(advances/s)", self.manager.get(SettingKeys.ADV_VELOCITY, "17146.6")],
                     ["Entry", "許容する消費数上限", self.manager.get(SettingKeys.SEARTH_MAX, "10000000")],
                     ["Spin", "待機時間の調整(差し引く秒数)", [str(i) for i in range(0, 501)], self.manager.get(SettingKeys.TIME_OFFSET, "0")],
-                    ["Combo", "消費に使うダークポケモンの位置", self.shadow_pos_list, self.manager.get(SettingKeys.SHADOW_POS, self.shadow_pos_list[0])],
+                    ["Combo", "消費に使うダークポケモンの位置", self.shadow_pos_list, self.manager.get(SettingKeys.SHADOWS_POS, self.shadow_pos_list[0])],
                     ["Radio", "周波数(欧州版のみ)", self.freq_list, self.manager.get(SettingKeys.FREQUENCY, self.freq_list[0])],
                 ],
             )
@@ -115,11 +99,12 @@ class SeedSearchAutomate(ImageProcPythonCommand):
             self.manager.set(SettingKeys.FULLDB_PATH, self._setting[1])
             self.manager.set(SettingKeys.LIGHTDB_PATH, self._setting[2])
             self.manager.set(SettingKeys.LANGUAGE, self._setting[3])
-            self.manager.set(SettingKeys.ADV_VELOCITY, self._setting[4])
-            self.manager.set(SettingKeys.SEARTH_MAX, self._setting[5])
-            self.manager.set(SettingKeys.TIME_OFFSET, self._setting[6])
-            self.manager.set(SettingKeys.SHADOW_POS, self._setting[7])
-            self.manager.set(SettingKeys.FREQUENCY, self._setting[8])
+            self.manager.set(SettingKeys.ADV_METHOD, self._setting[4])
+            self.manager.set(SettingKeys.ADV_VELOCITY, self._setting[5])
+            self.manager.set(SettingKeys.SEARTH_MAX, self._setting[6])
+            self.manager.set(SettingKeys.TIME_OFFSET, self._setting[7])
+            self.manager.set(SettingKeys.SHADOWS_POS, self._setting[8])
+            self.manager.set(SettingKeys.FREQUENCY, self._setting[9])
             self.manager.save_settings()
             
         except Exception as e:
@@ -137,12 +122,12 @@ class SeedSearchAutomate(ImageProcPythonCommand):
         
         if self._setting[3] not in self.lang_list:
             raise Exception("言語が正しく設定されていません")
-
+        
         poke_files = [os.path.join(self.templates, "pokemon", f"{i}.png") for i in range(8)]
         player_files = [os.path.join(self.templates, "player", self.lang_dic[self._setting[3]], f"{i}.png") for i in range(3)]
         
         # 50hzにすると画面比率が微妙に変わるためリサイズする
-        if self._setting[3] != "日本語" and self._setting[8] == "50hz":
+        if self._setting[3] != "日本語" and self._setting[9] == "50hz":
             self.poke_mats = [
                 cv2.resize(cv2.imread(file, cv2.IMREAD_GRAYSCALE), None, fx=1.0, fy=0.91, interpolation=cv2.INTER_LINEAR)
                 for file in poke_files
@@ -159,20 +144,20 @@ class SeedSearchAutomate(ImageProcPythonCommand):
             self.rep_interval = 0.15
             self.cancel_wait = 0.6
         
-        self.adv_velocity = float(self._setting[4])
-        self.search_max = int(self._setting[5])
-        self.time_offset = int(self._setting[6])
-        if self._setting[7] not in self.shadow_pos_list:
+        self.adv_velocity = float(self._setting[5])
+        self.search_max = int(self._setting[6])
+        self.time_offset = float(self._setting[7])
+        if self._setting[8] not in self.shadow_pos_list:
             raise Exception("ダークポケモンの位置が正しく設定されていません")
         
     def skip_opening(self):
         self.hard_reset()
-        if self._setting[4] != "日本語":
+        if self._setting[3] != "日本語":
             self.wait(5)
             self.wait_freq_option()
             # 初回のみ周波数を選択する
             if self.is_first:
-                direction = Hat.LEFT if self._setting[5] == "60hz" else Hat.RIGHT
+                direction = Hat.LEFT if self._setting[9] == "60hz" else Hat.RIGHT
                 self.press(direction)
                 self.press(Button.A)
                 self.is_first = False
@@ -193,10 +178,7 @@ class SeedSearchAutomate(ImageProcPythonCommand):
         self.wait_until_load_finishes(0.2)
         self.press(Hat.RIGHT)
         self.press(Hat.BTM)
-        self.press(Button.A)
-
-        if self.wait_load(10):
-            self.wait_until_load_finishes(0.2)
+        self.press(Button.A, wait=2.5)
     
     def seed_search(self):
         keys = []
@@ -255,6 +237,69 @@ class SeedSearchAutomate(ImageProcPythonCommand):
                 self.finish()
             
             self.checkIfAlive()
+    
+    def wait_for_advance(self, wait_time):
+        if self._setting[4] == self.adv_method_list[0]:
+            self.advance_by_shadows(wait_time)
+        elif self._setting[4] == self.adv_method_list[1]:
+            self.advance_by_battle(wait_time)
+        else:
+            print("設定により消費は行われませんでした。")
+    
+    def advance_by_battle(self, wait_time: float):
+        force_wait_time = 45 # バトル開始から降参可能になるまでの大体の時間
+        wait_time -= force_wait_time
+        if wait_time < 1:
+            print("待機時間が1秒に満たなかったため、消費は行われませんでした。")
+            return
+        self.press(Hat.RIGHT)
+        self.press_while_loading(Button.A)
+        self.wait_until_load_finishes(12)
+        self.press(Hat.LEFT)
+        self.press(Hat.TOP)
+        self.press(Hat.BTM)
+        self.press(Hat.RIGHT, wait=0.6)
+        self.press(Button.A)
+        if self.wait_load(5):
+            self.wait_until_load_finishes()
+        print("-- 消費中です -- ")
+        self.cancellation_wait(force_wait_time)
+        self.press(Hat.RIGHT, wait=0.15)
+        self.press(Button.A, wait=0.15)
+        self.press(Hat.RIGHT, wait=0.15)
+        self.press(Button.A, wait=0.15)
+        self.press(Hat.RIGHT, wait=0.15)
+        self.press(Button.A, wait=0.15)
+        self.press(Hat.RIGHT, wait=0.15)
+        self.cancellation_wait(wait_time)
+        self.press(Button.A)
+        if self.wait_load(5):
+            self.wait_until_load_finishes()
+        self.press_while_loading(Button.B)
+        print("-- 消費が終了しました -- ")
+        
+    def advance_by_shadows(self, wait_time):
+        # 続きから
+        self.press(Button.B, wait=2.5)
+        self.press(Button.A, wait=0.5)
+        self.press(Hat.TOP)
+        self.press(Button.A)
+        if self.wait_load(5):
+            self.wait_until_load_finishes()
+        # 手持ち開く -> 大量消費
+        self.open_party_menu()
+        if wait_time < 1:
+            print("待機時間が1秒に満たなかったため、消費は行われませんでした。")
+            return
+        for _ in range(self.shadow_pos_list.index(self._setting[8])):
+            self.press(Hat.BTM)
+        print("-- 消費中です -- ")
+        self.pressRep(Button.A, 2)
+        if self.wait_load(5):
+            self.wait_until_load_finishes()
+        self.cancellation_wait(wait_time)
+        self.press(Button.B)
+        print("-- 消費が終了しました -- ")
 
     def wait_load(self, timeout):
         start = perf_counter()
@@ -308,6 +353,7 @@ class SeedSearchAutomate(ImageProcPythonCommand):
         """
         暗転するまでボタンを押す
         """
+        
         lower = np.array([0, 0, 0])
         upper = np.array([180, 255, 50])
         while not image_process.calc_color_ratio(self.camera.readFrame(), lower, upper) > threshold:
@@ -356,12 +402,7 @@ class SeedSearchAutomate(ImageProcPythonCommand):
         return None
     
     def calc_wait_time(self, adv):
-        wait_time = adv / self.adv_velocity
-        if wait_time >= self.time_offset: 
-            wait_time -= self.time_offset
-        if wait_time < 1:
-            return 0
-        return wait_time
+        return (adv / self.adv_velocity) - self.time_offset
 
     def hard_reset(self, max_count=5):
         count = 0
@@ -377,7 +418,7 @@ class SeedSearchAutomate(ImageProcPythonCommand):
                 print("リセットに失敗したためマクロを終了します")
                 self.finish()
     
-    def _wait(self, wait_time: float):
+    def cancellation_wait(self, wait_time: float):
         if wait_time < 3:
             start_time = perf_counter()
             while (perf_counter() - start_time) < wait_time:
