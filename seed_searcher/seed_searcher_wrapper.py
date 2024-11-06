@@ -3,14 +3,19 @@ import os
 from typing import List, Tuple, Union
 from System import ValueTuple
 
+def unblock_dll(dll_path):
+    zone_identifier = f"{dll_path}:Zone.Identifier"
+    if os.path.exists(zone_identifier):
+        os.remove(zone_identifier)
 
 dll = os.path.join(os.path.dirname(__file__), "PokemonCOSeedDataBaseAPI.dll")
+unblock_dll(dll)
+
 try:
     clr.AddReference(dll)
     from PokemonCOSeedDataBaseAPI import SeedSearcher, PlayerName, BattleTeam
 except Exception as e:
     raise ImportError(f"DLL の読み込みに失敗しました: {dll}\n {e}")
-
 
 class SeedSearcherWrapper:
     def __init__(self, db_path, mode="light"):

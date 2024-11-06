@@ -2,6 +2,11 @@
 
 Poke-Controllerで『ポケモンコロシアム』のseed厳選を自動化するマクロです。
 
+## 導入手順
+
+1. 右上にある「Code」ボタンをクリック→Download ZIPを選択してzipファイルをDL
+2. zipファイルを解凍し、`co_seedsearch_automate-master`を`SerialController\Commands\PythonCommands`配下に配置
+
 ## 事前準備
 
 1. 付属の `TargetSeed.txt`に、**16進数**で**1行ずつ**目標seedを記述してください。　　
@@ -20,6 +25,7 @@ C0FFEE
 ## 使用方法：設定ダイアログの説明
 
 実行ボタンを押すと以下のようなダイアログが表示されます。  
+
 ![Dialog](https://github.com/L1zett/co_seedsearch_automate/blob/images/dialog.png)
 
 - 検索方法  
